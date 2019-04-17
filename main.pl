@@ -256,9 +256,11 @@ play :-
     is_player1( Player ),
     play(12, Player, Board ).
 
+/*
+-------------------------------
+code for section 3.6
+-------------------------------
 play(0, Player, Board) :-
-     check_winner(Player, Board),
-check_winner(Player, Board) :-
     and_the_winner_is(Board, Player),
      report_winner(Player).
     
@@ -271,8 +273,6 @@ play(0, Player, Board) :-
     delete(Board, point_merel(RPoint, _), NBoard),
     display_board(NBoard),
     % Check if there is a winner
-    check_winner(Board)
-
     % Let the Player now continue 
     get_legal_move(Player, OldPoint, NewPoint, NBoard),
     report_move(Player, OldPoint, NewPoint),
@@ -316,7 +316,7 @@ play(MerelsLeft, Player, Board) :-
     display_board(NewBoard),
     other_player(Player, Other),
     NewMerelsLeft is MerelsLeft - 1,
-    play(NewMerelsLeft, Other, NewBoard).         
+    play(NewMerelsLeft, Other, NewBoard).*/    
 
 check_for_mill(Point, Merels) :- 
     row(Point, Point1, Point2),
@@ -332,20 +332,144 @@ check_for_mill(Point, Merels) :-
     row(Point1, Point2, Point),
     member(Point1, Merels),
     member(Point2, Merels).
+% ----------------------------------
+/* Code for section 4.0 */
+% ----------------------------------
+play(0, _, Board) :-
+    and_the_winner_is(Board, Player),
+     report_winner(Player).
+
+% If a human player played last, check if he/she made a mill and get 
+% Merel of the computer opponent to remove and allow the computer to continue playing.
+play(0, Player, Board) :- 
+    other_player(Player, Other),
+    is_player1(Other),
+    [point_merel(Point, Other) | _] = Board,
+    find_player_merels(Board, Other, Merels),
+    check_for_mill(Point, Merels),
+    get_remove_point(Other, RPoint, Board),
+    delete(Board, point_merel(RPoint, _), NBoard),
+    report_remove(Other, RPoint),
+    display_board(NBoard),
     
+    % Let the Player2(Computer) to continue playing. 
+    choose_move( Player, OldPoint, NewPoint, NBoard),
+    report_move(Player, OldPoint, NewPoint),
+    delete(NBoard, point_merel(OldPoint, Player), UpdatedBoard),
+    NewBoard = [point_merel(NewPoint, Player)| UpdatedBoard],
+    display_board(NewBoard),
+    play(0, Other, NewBoard).
 
 
+play(0, Player, Board) :- 
 
+    other_player(Player, Other),
+    is_player2(Other),
+    [point_merel(Point, Other) | _] = Board,
+    find_player_merels(Board, Other, Merels),
+    check_for_mill(Point, Merels),
+    choose_remove( Other, RPoint, Board ),
+    report_remove(Other, RPoint),
+    delete(Board, point_merel(RPoint, _), NBoard),
+    display_board(NBoard),
     
+    % Let the Player1 (Human) to continue playing. 
+    get_legal_move(Player, OldPoint, NewPoint, NBoard),
+    report_move(Player, OldPoint, NewPoint),
+    delete(NBoard, point_merel(OldPoint, Player), UpdatedBoard),
+    NewBoard = [point_merel(NewPoint, Player)| UpdatedBoard],
+    display_board(NewBoard),
+    play(0, Other, NewBoard).
+
+play(0, Player, Board) :-
+        is_player1(Player),
+        get_legal_move(Player, OldPoint, NewPoint, Board),
+        report_move(Player, OldPoint, NewPoint),
+        delete(Board, point_merel(OldPoint, Player), UpdatedBoard),
+        NewBoard = [point_merel(NewPoint, Player)| UpdatedBoard],
+        display_board(NewBoard),
+        other_player(Player, Other),
+        play(0, Other, NewBoard).
+play(0, Player, Board) :-
+        is_player2(Player),
+        choose_move( Player, OldPoint, NewPoint, Board ),
+        report_move(Player, OldPoint, NewPoint),
+        delete(Board, point_merel(OldPoint, Player), UpdatedBoard),
+        NewBoard = [point_merel(NewPoint, Player)| UpdatedBoard],
+        display_board(NewBoard),
+        other_player(Player, Other),
+        play(0, Other, NewBoard).
+% If nobody won, check if the player who just played formed any mills
+% check if new mills were formed before the next player starts his game
+play(MerelsLeft, Player, Board) :-
+    other_player(Player, Other),
+    is_player2(Other),
+    [point_merel(Point, Other) | _] = Board,
+    find_player_merels(Board, Other, Merels),
+    check_for_mill(Point, Merels),
+    choose_remove( Player, RPoint, Board),
+    report_remove(Other, RPoint),
+    delete(Board, point_merel(RPoint, _), NBoard),
+    display_board(NBoard),
+
+    % Allow the other player to continue
+    get_legal_place(Player, LegalPoint, NBoard),
+    NewBoard = [point_merel(LegalPoint, Player) | NBoard],
+    report_move(Player, LegalPoint),
+    NewMerelsLeft is MerelsLeft - 1,
+    display_board(NewBoard),
+    play(NewMerelsLeft, Other, NewBoard).
+
+play(MerelsLeft, Player, Board) :-
+    other_player(Player, Other),
+    is_player1(Other),
+    [point_merel(Point, Other) | _] = Board,
+    find_player_merels(Board, Other, Merels),
+    check_for_mill(Point, Merels),
+    get_remove_point(Other, RPoint, Board),
+    report_remove(Other, RPoint),
+    delete(Board, point_merel(RPoint, _), NBoard),
+    display_board(NBoard),
+
+    % Allow the other player to continue
+    choose_place(Player, LegalPoint, NBoard),
+    NewBoard = [point_merel(LegalPoint, Player) | NBoard],
+    report_move(Player, LegalPoint),
+    NewMerelsLeft is MerelsLeft - 1,
+    display_board(NewBoard),
+    play(NewMerelsLeft, Other, NewBoard).
 
 
-    
+play(MerelsLeft, Player, Board) :- 
+    is_player1(Player),
+    get_legal_place(Player, Point, Board),
+    NewBoard = [point_merel(Point, Player) | Board],
+    report_move(Player, Point),
+    display_board(NewBoard),
+    other_player(Player, Other),
+    NewMerelsLeft is MerelsLeft - 1,
+    play(NewMerelsLeft, Other, NewBoard).
 
+play(MerelsLeft, Player, Board) :- 
+    is_player2(Player),
+    choose_place(Player, Point, Board),
+    NewBoard = [point_merel(Point, Player) | Board],
+    report_move(Player, Point),
+    display_board(NewBoard),
+    other_player(Player, Other),
+    NewMerelsLeft is MerelsLeft - 1,
+    play(NewMerelsLeft, Other, NewBoard).
 
-    
+choose_place( _Player, Point, Board ) :-
+    connected( Point, _ ),
+    \+ merel_on_board( point_merel(Point, _), Board).
 
+choose_move( Player, OldPoint, NewPoint, Board ) :-
+    pair( Pair, OldPoint, Player ),
+    merel_on_board( Pair, Board ),
+    connected( OldPoint, NewPoint ),
+    \+ merel_on_board( point_merel(NewPoint, _), Board ).
 
-
-
-
-
+choose_remove( Player, Point, Board ) :-
+    pair( Pair, Point, Player ),
+    merel_on_board( Pair, Board ).
